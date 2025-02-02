@@ -1,3 +1,4 @@
+from cryptography.fernet import Fernet
 from pathlib import Path
 from rutas import *
 from datetime import date
@@ -100,3 +101,31 @@ def cambiar_tipos_datos(df: pd.DataFrame, ruta_archivo: Path) -> pd.DataFrame:
         print(f"Error en la transformación de datos, revisar función 'cambiar tipos_datos' {error}")
         # Cerrar el programa
         sys.exit(1)
+
+def anonimizacion_datos(df: pd.DataFrame, nombre_columnas: list[str]) -> tuple[pd.DataFrame, Fernet]:
+    """
+    Dado un DataFrame y una lista de nombres de columnas, anonimiza las columnas
+    seleccionadas con una clave de cifrado.
+
+    Parameters:
+    df: DataFrame al cuál se quiere anonimizar los datos, la información 
+        dentro de estas columnas deben de ser tipo string | type pd.DataFrame
+    nombre_columnas: Nombres de las columnas | type list[str]
+
+    Returns:
+    df: DataFrame modificado
+    llave: objeto Fernet con la clave de cifrado
+    """
+    # Se genera clave de cifrado, con la cuál se puede restaurar la info nuevamente
+    llave = Fernet.generate_key()
+    # Se genera un cifrador con la clave
+    cifrador = Fernet(llave)
+
+    # Cifrado para las columnas dadas
+    for columna in nombre_columnas:
+        # Se aplica función de cifrado para cada valor en de la columna seleccionada
+        # Los valores a encriptar deben se str
+        df[columna] = df[columna].apply(lambda valor: cifrador.encrypt(str(valor).encode()).decode())
+
+    return  df, llave
+
