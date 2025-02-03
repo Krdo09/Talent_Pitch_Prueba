@@ -1,0 +1,30 @@
+-- Ejercicio 1
+select *
+from challenges	chll
+-- No hay fecha en los csv que fueron creados en los ultimos 3 meses, cambiar 3 por un numero diferente
+where chll.status = 'published' and  chll.created_at >= CURRENT_DATE - INTERVAL '3 months';
+
+
+-- Ejercicio 2
+select 
+	p.user_id, 
+	r.video, 
+	p.onboarding_goal as "main_objetive",
+	p.updated_at,
+	p.created_at,
+	r.type as "pitch_name" 
+from profiles p 
+inner join users u on p.user_id = u.id
+inner join resumenes r on p.user_id  = r.user_id 
+where r.type = 'pitch_video'
+	and p.onboarding_goal = 'be_discovered-[hire]' or p.onboarding_goal = 'be_discovered-[collaborate]'
+	and	p.created_at >= NOW() - INTERVAL '2 months'
+	and r.video  is not null
+
+
+select u.slug "account_name", p."views" 
+from profiles p 
+inner join users u on p.user_id = u.id 
+order by p."views" desc
+	
+
