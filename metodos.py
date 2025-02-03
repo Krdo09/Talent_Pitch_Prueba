@@ -1,9 +1,9 @@
 from cryptography.fernet import Fernet
 from pathlib import Path
+from pgcopy import CopyManager
 from rutas import *
-from datetime import date
 import pandas as pd
-import numpy as np
+import psycopg2
 import sys
 
 
@@ -19,7 +19,7 @@ def abrir_csv(ruta_archivo: Path) -> pd.DataFrame:
     """
     try:
         # Abrir csv
-        df = pd.read_csv(ruta_archivo.as_posix())
+        df = pd.read_csv(ruta_archivo.as_posix(), encoding='utf-8')
         # Mensaje de carga exitosa
         print(f"Se cargo exitosamente el archivo: {ruta_archivo.stem}{ruta_archivo.suffix}")
 
@@ -94,6 +94,9 @@ def cambiar_tipos_datos(df: pd.DataFrame, ruta_archivo: Path) -> pd.DataFrame:
         # Cambiar datos tipo np.NaN por None, dado que la DB solo acepta tipos NULL que son equivalentes a None 
         df = df.replace({'nan': None})
 
+        # Se transforman las columnas datetime64[ns] a formato aceptable para Date
+        df[df.select_dtypes(include=["datetime64"]).columns] = df.select_dtypes(include=["datetime64"]).apply(lambda x: x.dt.date)
+
 
         return df
 
@@ -116,16 +119,54 @@ def anonimizacion_datos(df: pd.DataFrame, nombre_columnas: list[str]) -> tuple[p
     df: DataFrame modificado
     llave: objeto Fernet con la clave de cifrado
     """
-    # Se genera clave de cifrado, con la cuál se puede restaurar la info nuevamente
-    llave = Fernet.generate_key()
-    # Se genera un cifrador con la clave
-    cifrador = Fernet(llave)
+    try:
+        # Se genera clave de cifrado, con la cuál se puede restaurar la info nuevamente
+        llave = Fernet.generate_key()
+        # Se genera un cifrador con la clave
+        cifrador = Fernet(llave)
 
-    # Cifrado para las columnas dadas
-    for columna in nombre_columnas:
-        # Se aplica función de cifrado para cada valor en de la columna seleccionada
-        # Los valores a encriptar deben se str
-        df[columna] = df[columna].apply(lambda valor: cifrador.encrypt(str(valor).encode()).decode())
+        # Cifrado para las columnas dadas
+        for columna in nombre_columnas:
+            # Se aplica función de cifrado para cada valor en de la columna seleccionada
+            # Los valores a encriptar deben se str
+            df[columna] = df[columna].apply(lambda valor: cifrador.encrypt(str(valor).encode()).decode())
 
-    return  df, llave
+        return  df, llave
+    except Exception as error:
+        # Mensaje error
+        print(f"Error en la anonimización de datos, revisar función 'anonimizacion_datos': \n{error}")
+        sys.exit(1)
 
+def carga_datos(df:pd.DataFrame, nombre_tabla:str) -> None:
+    """
+    Carga el DataFrame suministrado a la tabla indicada en PostgreSQL
+
+    Parameters:
+    df: DataFrame a subir en PostgreSQL
+    nombre_tabla: Nombre de la tabla creada en PostgreSQL
+
+    Returns: None
+    """
+    try:
+        # Se estable conexión con la db
+        conexion = psycopg2.connect(
+            dbname="postgres",       # Ingresar credenciales para la conexion
+            user="postgres",
+            password="Juli09",
+            host="localhost",
+            port="5432"
+        )
+        # Cargar datos en la db
+        nombres_columnas = list(df.columns)
+        carga_postgre = CopyManager(conexion, nombre_tabla, nombres_columnas)
+        carga_postgre.copy(df.to_records(index=False))
+        # Actualizar db
+        conexion.commit()
+        conexion.close()
+        
+        print('Carga de datos exitosa')
+
+    except Exception as error:
+        print(f"Error en la carga de datos, revisar función 'carga_datos': \n{error}")
+
+        

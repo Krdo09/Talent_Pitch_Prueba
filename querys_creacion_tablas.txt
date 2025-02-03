@@ -1,0 +1,39 @@
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name TEXT,
+    identification_number TEXT,
+    slug TEXT,
+    video TEXT,
+    email TEXT,
+    gender TEXT,
+    created_at DATE DEFAULT,
+    updated_at DATE DEFAULT
+);
+
+CREATE TABLE profiles (
+    id SERIAL PRIMARY KEY,
+    user_id INT,
+    onboarding_goal TEXT,
+    created_at DATE,
+    updated_at DATE,
+    views INT
+);
+
+CREATE TABLE profiles (
+    id SERIAL PRIMARY KEY,
+    user_id INT,
+    name TEXT,
+    type TEXT,
+    video TEXT,
+    views INT,
+    created_at DATE DEFAULT
+);
+
+CREATE TABLE challenges (
+    id SERIAL PRIMARY KEY,
+    name TEXT,
+    description TEXT,
+    status TEXT,
+    opencall_objective TEXT,
+    created_at DATE DEFAULT
+);
