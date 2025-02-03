@@ -168,5 +168,6 @@ def carga_datos(df:pd.DataFrame, nombre_tabla:str) -> None:
 
     except Exception as error:
         print(f"Error en la carga de datos, revisar función 'carga_datos': \n{error}")
+        sys.exit(1)
 
         
